@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Automator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=file]::file-selector-button {
+            margin-right: 20px;
+            border: none;
+            background: #4f46e5;
+            padding: 8px 16px;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            transition: background .2s ease-in-out;
+        }
+        input[type=file]::file-selector-button:hover {
+            background: #4338ca;
+        }
+        .ProseMirror { min-height: 200px; outline: none; }
+        .ProseMirror p { margin-bottom: 0.5em; }
+        .ProseMirror p.is-editor-empty:first-child::before {
+            content: attr(data-placeholder);
+            float: left;
+            color: #9ca3af;
+            pointer-events: none;
+            height: 0;
+        }
+        .mention {
+            border: 1px solid #c7d2fe;
+            border-radius: 0.4rem;
+            padding: 0.1rem 0.3rem;
+            background: #e0e7ff;
+            color: #4338ca;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen py-10 px-4 sm:px-6 lg:px-8">
+
+    <div id="pop-up-alert-container" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden">
+        <div id="pop-up-alert-content" class="relative w-full max-w-3xl mx-auto rounded-xl bg-white p-6 shadow-2xl text-center"></div>
+    </div>
+
+    <div class="max-w-3xl mx-auto">
+        
+        <div class="mb-8 text-center">
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Email Automator</h1>
+            <p class="mt-2 text-sm text-gray-500">Securely dispatch campaigns to multiple recipients.</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+            <form id="email-sending-form" class="p-6 sm:p-10 space-y-8">
+                
+                <div class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-900 border-b pb-2">1. Sender Credentials</h2>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label for="sender-email" class="block text-sm font-medium text-gray-700">Sender Email</label>
+                            <input type="email" id="sender-email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2 border bg-gray-50">
+                        </div>
+                        <div>
+                            <label for="sender-email-password" class="block text-sm font-medium text-gray-700">Sender Password</label>
+                            <div class="relative w-full max-w-xs">
+                                <input type="password" id="sender-email-password" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2 border bg-gray-50">
+                                <button id="toggle-password" onclick="togglePassword()" type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                                        <path d="M0 0h24v24H0z" fill="none" />
+                                        <path fill="#000" fill-rule="evenodd" d="M22.295 6.31a.75.75 0 0 1 .394.986L22 7l.69.296v.001l-.002.003l-.003.007l-.01.024l-.039.084a14 14 0 0 1-.727 1.321a15 15 0 0 1-1.846 2.394l.968.969a.75.75 0 0 1-1.06 1.06l-1.001-1a11.6 11.6 0 0 1-2.274 1.497l.934 1.435a.75.75 0 1 1-1.258.818l-1.089-1.674c-.78.255-1.623.428-2.532.49V16.5a.75.75 0 0 1-1.5 0v-1.775a10.5 10.5 0 0 1-2.46-.466l-1.074 1.65a.75.75 0 1 1-1.258-.818l.913-1.402a11.5 11.5 0 0 1-2.293-1.49l-.96.96a.75.75 0 0 1-1.061-1.06l.924-.924A15 15 0 0 1 1.514 7.72a10 10 0 0 1-.188-.388l-.01-.025l-.004-.007v-.003H1.31L2 7l-.69.296a.75.75 0 0 1 1.379-.592v.002l.007.014l.029.063q.04.086.125.255a13.3 13.3 0 0 0 2.706 3.584c.866.805 1.927 1.546 3.196 2.034A9 9 0 0 0 12 13.25a9 9 0 0 0 3.312-.619c1.262-.497 2.316-1.243 3.175-2.049a13.3 13.3 0 0 0 2.789-3.8l.028-.063l.006-.013v-.001m.985-.394a.75.75 0 0 0-.984.394zM2.69 6.704" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4 pt-2">
+                        <button type="button" id="check-credentials" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                            <svg class="mr-2 -ml-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Check Authorization
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-900 border-b pb-2">2. Recipient Variables</h2>
+
+                    <div>
+                        <label for="recipients-data-from-xlsx" class="block text-sm font-medium text-gray-700 mb-2">Load from .xlsx file</label>
+                        <input type="file" id="recipients-data-from-xlsx" accept=".xlsx" class="block w-full text-sm text-gray-500">
+                    </div>
+
+                    <h3 class="font-semibold">Define Variables</h3>
+
+                    <ul id="variables-list">
+                        <li>Recipient Email (as <span class="text-cyan-600 font-semibold">@recipient-email</span>)</li>
+                    </ul>
+                    <div class="flex items-center space-x-4 pt-2">
+                        <button type="button" id="add-new-variable" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                            <svg class="mr-2 -ml-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 256 256">
+                                <path d="M0 0h256v256H0z" fill="none" />
+                                <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16">
+                                    <circle cx="128" cy="128" r="112" />
+                                    <path d="M 79.999992,128 H 176.0001" />
+                                    <path d="m 128.00004,79.99995 v 96.0001" />
+                                </g>
+                            </svg>
+                            Add New Variable
+                        </button>
+                    </div>
+                    <div id="recipients-saved"></div>
+                </div>
+
+                <div class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-900 border-b pb-2">3. Message</h2>
+                    <div>
+                        <label for="subject" class="block text-sm font-medium text-gray-700">Subject</label>
+                        <input type="text" id="subject" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2 border bg-gray-50">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Content</label>
+                        
+                        <div id="editor-toolbar" class="flex items-center space-x-1 border border-gray-300 border-b-0 rounded-t-md bg-gray-100 p-2">
+                            <button type="button" id="btn-bold" class="p-1.5 rounded text-gray-600 hover:bg-gray-200 transition-colors font-bold w-8">B</button>
+                            <button type="button" id="btn-italic" class="p-1.5 rounded text-gray-600 hover:bg-gray-200 transition-colors italic w-8">I</button>
+                            <div class="w-px h-5 bg-gray-300 mx-1"></div>
+                            <button type="button" id="btn-bullet" class="p-1.5 rounded text-gray-600 hover:bg-gray-200 transition-colors text-sm font-medium flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path></svg>
+                                List
+                            </button>
+                        </div>
+                        
+                        <div id="editor-container" class="block w-full rounded-b-md border border-gray-300 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white px-4 py-3 text-sm text-gray-800"></div>
+                        
+                        <p class="text-xs text-gray-500 mt-2">Type <kbd class="bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-gray-800 font-mono shadow-sm">@</kbd> to insert a custom variable.</p>
+                    </div>
+                    
+                    <div>
+                        <label for="attachment" class="block text-sm font-medium text-gray-700 mb-2">Attachment (Optional)</label>
+                        <input type="file" id="attachment" class="block w-full text-sm text-gray-500">
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" id="btn-send-email" class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                        <svg class="mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                        </svg>
+                        Send Email Campaign
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script type="module" src="app.mjs"></script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+import { API_BASE_URL, AuthenticationStatus, checkBadgeSVG, checkSVG, clearSVG, clipboardSVG, eyeClosedSVG, eyeOpenedSVG, loadSVG, spreadSheetSVG, verificationSVG } from './config.mjs';
+import { cancelButton, recipientsOrderedList, setCheckCredentials, togglePassword, newVariablePopUpAlert, appendVariableElementToList, buildColumnSelectionUI, buildSheetSelectionUI, buildVariableSelectionUI, buildRecipientsTableUI } from './ui.mjs';
+import { createNewController, apiCheckCredentials, apiFileMetadata, apiLoadRecipientsByPlainText, apiLoadRecipientsByXlsx, apiSendEmails, apiTestConnection, apiLoadActiveColumns, apiExtractMappedData } from './api.mjs';
+import { initRichTextEditor } from './text-editor.mjs'
+
+const emailSendingForm = document.getElementById('email-sending-form');
+const senderEmail = document.getElementById('sender-email');
+const senderEmailPassword = document.getElementById('sender-email-password');
+const eyeBtn = document.getElementById('toggle-password');
+const checkCredentialsBtn = document.getElementById('check-credentials');
+const recipientsDataFromExcel = document.getElementById('recipients-data-from-xlsx');
+const popUpAlertContainer = document.getElementById('pop-up-alert-container');
+const popUpAlertContent = document.getElementById('pop-up-alert-content');
+const savedRecipientsContainer = document.getElementById('recipients-saved');
+const variablesList = document.getElementById('variables-list');
+const newVariableBtn = document.getElementById('add-new-variable');
+const subject = document.getElementById('subject');
+const content = document.getElementById('content');
+const attachment = document.getElementById('attachment');
+
+let emailEditor;
+
+let recipientsData = [];
+let currentTablePage = 1;
+const ROWS_PER_PAGE = 10;
+
+let customVariablesMap = {
+    '@recipient-email': null
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+    emailEditor = initRichTextEditor('editor-container', () => {
+        return Object.keys(customVariablesMap);
+    });
+});
+
+const loadRecipientsData = async (file) => {
+    savedRecipientsContainer.className = "mt-6 p-6 bg-gray-50 rounded-xl border border-gray-200 shadow-inner flex justify-center";
+    savedRecipientsContainer.innerHTML = `<svg class="animate-spin h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+    try {
+        const data = await apiExtractMappedData(file, customVariablesMap);
+
+        if (data && data.length > 0) {
+            recipientsData = data;
+            currentTablePage = 1;
+            renderTable();
+        } else {
+            savedRecipientsContainer.innerHTML = `<p class="text-red-500 font-bold text-center w-full">No valid data found based on those mappings.</p>`;
+        }
+    } catch (error) {
+        console.error('Error during POST /extract-mapped-data request', error);
+    }
+};
+
+senderEmail.addEventListener('input', () => {
+    setCheckCredentials(checkCredentialsBtn, AuthenticationStatus.AVAILABLE);
+});
+
+senderEmailPassword.addEventListener('input', () => {
+    setCheckCredentials(checkCredentialsBtn, AuthenticationStatus.AVAILABLE);
+});
+
+checkCredentialsBtn.addEventListener('click', async (event) => await checkCredentials());
+
+const checkCredentials = async () => {
+    try {
+        setCheckCredentials(checkCredentialsBtn, AuthenticationStatus.PROCESSING);
+        const data = await apiCheckCredentials(senderEmail.value, senderEmailPassword.value);
+        const nextState = data.authorized ? AuthenticationStatus.SUCCEED : AuthenticationStatus.FAILED;
+        setCheckCredentials(checkCredentialsBtn, nextState);
+    } catch (error) {
+        console.error('Error during POST /check-credentials request', error);
+    }
+}
+
+recipientsDataFromExcel.addEventListener('change', async (event) => {
+    if (recipientsDataFromExcel.files.length === 0) {
+        savedRecipientsContainer.replaceChildren();
+        savedRecipientsContainer.className = "empty:hidden";
+        return;
+    }
+
+    const file = recipientsDataFromExcel.files[0];
+    const { controller: fileMetadataController, signal: fileMetadataSignal } = createNewController();
+
+    popUpAlertContent.innerHTML = `
+        <div id="waiting-container" class="text-center py-4">
+            <h2 class="text-xl font-bold text-gray-900">Analyzing Workbook</h2>
+            <p class="mt-2 text-sm text-gray-500">This can take a few seconds...</p>
+            <div class="flex justify-center p-8">
+                <svg class="animate-spin h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('waiting-container').appendChild(cancelButton(() => {
+        fileMetadataController.abort();
+        popUpAlertContainer.classList.add('hidden');
+        popUpAlertContent.replaceChildren();
+        event.target.value = '';
+    }));
+
+    popUpAlertContainer.classList.remove('hidden');
+
+    try {
+        const metadata = await apiFileMetadata(file, fileMetadataSignal);
+        const sheets = metadata.sheets;
+
+        let currentVariable = null;
+        let currentSheet = null;
+
+        const renderWizard = async () => {
+            if (currentVariable === null) {
+                const ui = buildVariableSelectionUI(
+                    customVariablesMap,
+                    (selectedVar) => { currentVariable = selectedVar; renderWizard(); },
+                    () => { popUpAlertContainer.classList.add('hidden'); event.target.value = ''; },
+                    () => { 
+                        console.log("Final Mappings ready for Backend:", customVariablesMap);
+                        popUpAlertContainer.classList.add('hidden');
+                        loadRecipientsData(file);
+                    }
+                );
+                popUpAlertContent.replaceChildren(ui);
+                
+            } else if (currentSheet === null) {
+                const ui = buildSheetSelectionUI(
+                    currentVariable,
+                    sheets,
+                    async (selectedSheet) => { currentSheet = selectedSheet; await renderWizard(); },
+                    () => { currentVariable = null; renderWizard(); }
+                );
+                popUpAlertContent.replaceChildren(ui);
+                
+            } else {
+                const { controller: loadActiveColumnsController, signal: loadActiveColumnsSignal } = createNewController();
+
+                popUpAlertContent.innerHTML = `
+                    <div id="waiting-container" class="text-center py-4">
+                        <h2 class="text-xl font-bold text-gray-900">Analyzing Sheet '${currentSheet}'</h2>
+                        <p class="mt-2 text-sm text-gray-500">This can take a few seconds...</p>
+                        <div class="flex justify-center p-8">
+                            <svg class="animate-spin h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('waiting-container').appendChild(cancelButton(() => {
+                    loadActiveColumnsController.abort();
+                    popUpAlertContainer.classList.add('hidden');
+                    popUpAlertContent.replaceChildren();
+                    event.target.value = '';
+                }));
+                
+                const colData = await apiLoadActiveColumns(file, currentSheet, loadActiveColumnsSignal);
+                
+                const usedColumns = Object.values(customVariablesMap)
+                    .filter(mapping => mapping !== null && mapping.sheet === currentSheet)
+                    .map(mapping => mapping.column);
+
+                const ui = buildColumnSelectionUI(
+                    currentVariable,
+                    currentSheet,
+                    colData.active_columns,
+                    usedColumns,
+                    (selectedCol) => {
+                        customVariablesMap[currentVariable] = { sheet: currentSheet, column: selectedCol };
+                        currentVariable = null;
+                        currentSheet = null;
+                        renderWizard(); 
+                    },
+                    () => { currentSheet = null; renderWizard(); }
+                );
+                popUpAlertContent.replaceChildren(ui);
+            }
+        };
+
+        renderWizard();
+
+    } catch (error) {
+        console.error("Error setting up variables:", error);
+        popUpAlertContainer.classList.add('hidden');
+    }
+});
+
+senderEmailPassword.addEventListener('keydown', async (event) => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        await checkCredentials();
+    }
+});
+
+emailSendingForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    if (recipientsData.length === 0 || !recipientsData[0]['@recipient-email']) {
+        console.error("Please map and extract your Excel data before sending the campaign."); // TODO: implement Toast Messages for better user feedback
+        return;
+    }
+
+    if (emailEditor.isEmpty) {
+        console.error("Please provide an email message content."); // TODO: implement Toast Messages for better user feedback
+        return;
+    }
+
+    try {
+        const emailAttachment = attachment.files.length > 0 ? attachment.files[0] : null;
+        const data = await apiSendEmails(senderEmail.value, senderEmailPassword.value, recipientsData, subject.value, emailEditor.getHTML(), emailAttachment);
+    } catch (error) {
+        console.error('Error during POST /send-emails request', error);
+    }
+});
+
+newVariableBtn.addEventListener('click', (event) => {
+    const popUpComponent = newVariablePopUpAlert(() => {
+        popUpAlertContainer.classList.add('hidden');
+        popUpAlertContent.replaceChildren();
+    });
+
+    const newVariableForm = popUpComponent.querySelector('#new-variable-form');
+    const newVariableInput = popUpComponent.querySelector('#new-variable-input');
+    const newVariableNaming = popUpComponent.querySelector('#new-variable-naming');
+    const createNewVariable = popUpComponent.querySelector('#create-new-variable-btn');
+
+    let kebabCaseVariableName = '';
+
+    newVariableInput.addEventListener('input', (event) => {
+        const hasValue = newVariableInput.value.trim() !== '';
+
+        kebabCaseVariableName = hasValue ? '@' + newVariableInput.value.toLowerCase().replaceAll(/[\s\_]/g, '-') : 'undefined';
+        newVariableNaming.textContent = kebabCaseVariableName;
+
+        createNewVariable.disabled = !hasValue;
+
+        if (hasValue) {
+            createNewVariable.classList.remove('bg-indigo-300', 'cursor-not-allowed');
+            createNewVariable.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'cursor-pointer');
+        } else {
+            createNewVariable.classList.remove('bg-indigo-600', 'hover:bg-indigo-700', 'cursor-pointer');
+            createNewVariable.classList.add('bg-indigo-300', 'cursor-not-allowed');
+        }
+    });
+
+    newVariableForm.addEventListener('submit', () => {
+        if (!customVariablesMap.hasOwnProperty(kebabCaseVariableName)) {
+            customVariablesMap[kebabCaseVariableName] = null;
+
+            appendVariableElementToList(variablesList, newVariableInput.value, kebabCaseVariableName);
+
+            popUpAlertContainer.classList.add('hidden');
+            popUpAlertContent.replaceChildren();
+        } else {
+            console.log('Variable already defined, please define a different one'); // TODO, feedback user in UI, not in console
+        }
+    });
+
+    popUpAlertContent.replaceChildren(popUpComponent);
+    popUpAlertContainer.classList.remove('hidden');
+});
+
+const renderTable = () => {
+    savedRecipientsContainer.className = "mt-6 p-6 bg-gray-50 rounded-xl border border-gray-200 shadow-inner";
+
+    const ui = buildRecipientsTableUI(
+        recipientsData,
+        currentTablePage,
+        ROWS_PER_PAGE,
+        (newPage) => {
+            currentTablePage = newPage;
+            renderTable();
+        },
+        () => {
+            recipientsData = [];
+            currentTablePage = 1;
+            savedRecipientsContainer.replaceChildren();
+            savedRecipientsContainer.className = "empty:hidden";
+            recipientsDataFromExcel.value = '';
+        },
+    );
+    savedRecipientsContainer.replaceChildren(ui);
+};
+
+window.togglePassword = () => togglePassword(senderEmailPassword, eyeBtn);
