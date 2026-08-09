@@ -1,0 +1,5 @@
+packages = ["openpyxl"]
+
+[[fetch]]
+from = "./core"
+files = ["excel_analyzer.py"]

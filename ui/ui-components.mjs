@@ -1,12 +1,13 @@
-import { AuthenticationStatus, eyeClosedSVG, eyeOpenedSVG, loadSVG, verificationSVG, clipboardSVG, checkSVG, clearSVG, checkBadgeSVG, spreadSheetSVG } from "./config.mjs";
+import { AuthenticationStatus } from "../core/config.mjs";
+import { SVG_ICONS } from "./svg-icons.mjs";
 
 export const togglePassword = (inputElement, btnElement) => {
     if (inputElement.type === 'password') {
         inputElement.type = 'text';
-        btnElement.innerHTML = eyeOpenedSVG;
+        btnElement.innerHTML = SVG_ICONS.EYE_OPENED;
     } else {
         inputElement.type = 'password';
-        btnElement.innerHTML = eyeClosedSVG;
+        btnElement.innerHTML = SVG_ICONS.EYE_CLOSED;
     }
 };
 
@@ -24,14 +25,14 @@ export const setCheckCredentials = (btnElement, state) => {
         const availableStyle = "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors";
         btnElement.className = availableStyle;
         btnElement.innerHTML = `
-            ${verificationSVG}
+            ${SVG_ICONS.VERIFICATION}
             Check Authorization
         `;
     } else if (state === AuthenticationStatus.PROCESSING) {
         const processingStyle = "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-100 transition-colors";
         btnElement.className = processingStyle;
         btnElement.innerHTML = `
-            ${loadSVG("#767676")}
+            ${SVG_ICONS.LOAD("#767676")}
             Validating
         `;
         btnElement.disabled = true;
@@ -61,7 +62,7 @@ export const recipientsOrderedList = (recipients, onClearCallback) => {
     const list = document.createElement('ol');
     list.className = "list-decimal list-inside text-sm text-gray-700 mb-4 max-h-32 overflow-y-auto";
 
-    recipients.forEach( recipient => {
+    recipients.forEach(recipient => {
         const listItem = document.createElement('li');
         listItem.textContent = recipient;
         list.appendChild(listItem);
@@ -74,7 +75,7 @@ export const recipientsOrderedList = (recipients, onClearCallback) => {
     clipboard.className = "inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500";
     clipboard.type = 'button';
     clipboard.innerHTML = `
-        ${clipboardSVG}
+        ${SVG_ICONS.CLIPBOARD}
         Copy
     `;
     clipboard.onclick = async () => {
@@ -83,7 +84,7 @@ export const recipientsOrderedList = (recipients, onClearCallback) => {
 
         const originalInnerHTML = clipboard.innerHTML;
         clipboard.innerHTML = `
-            ${checkSVG}
+            ${SVG_ICONS.CHECK}
             Copied!
         `;
         setTimeout(() => clipboard.innerHTML = originalInnerHTML, 2000);
@@ -93,7 +94,7 @@ export const recipientsOrderedList = (recipients, onClearCallback) => {
     clear.type = 'button';
     clear.className = "inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500";
     clear.innerHTML = `
-        ${clearSVG}
+        ${SVG_ICONS.CLEAR}
         Clear
     `;
 
@@ -141,7 +142,7 @@ export const appendVariableElementToList = (listElement, readableVariableName, k
 export const buildVariableSelectionUI = (variablesMap, onSelectVariable, onCancel, onFinish) => {
     const wrapper = document.createElement('div');
     wrapper.className = "text-center py-4 w-full animate-fade-in";
-    
+
     let html = `
         <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">Map Variables</h2>
         <p class="mt-2 text-sm text-gray-500 mb-6">Select a variable to assign an Excel column to it.</p>
@@ -154,10 +155,10 @@ export const buildVariableSelectionUI = (variablesMap, onSelectVariable, onCance
             <button data-var="${varName}" class="variable-btn group w-full flex items-center justify-between p-4 border-2 rounded-xl transition-all duration-200 hover:border-indigo-400 hover:shadow-md ${isMapped ? 'border-green-200 bg-green-50/30' : 'border-gray-200 bg-white'}">
                 <span class="font-mono font-bold ${isMapped ? 'text-green-700' : 'text-indigo-600'}">${varName}</span>
                 <span class="text-sm font-medium flex items-center">
-                    ${isMapped 
-                        ? `<span class="text-green-600 flex items-center">${checkSVG} ${mapping.sheet} &rarr; Col ${mapping.column}</span>` 
-                        : `<span class="text-gray-400 group-hover:text-indigo-500">Unmapped &rarr;</span>`
-                    }
+                    ${isMapped
+                ? `<span class="text-green-600 flex items-center">${SVG_ICONS.CHECK} ${mapping.sheet} &rarr; Col ${mapping.column}</span>`
+                : `<span class="text-gray-400 group-hover:text-indigo-500">Unmapped &rarr;</span>`
+            }
                 </span>
             </button>
         `;
@@ -166,7 +167,7 @@ export const buildVariableSelectionUI = (variablesMap, onSelectVariable, onCance
     html += `</div>
         <div class="mt-8 flex justify-end space-x-3 pt-4 border-t border-gray-100" id="wizard-actions"></div>
     `;
-    
+
     wrapper.innerHTML = html;
 
     wrapper.querySelectorAll('.variable-btn').forEach(btn => {
@@ -190,7 +191,7 @@ export const buildVariableSelectionUI = (variablesMap, onSelectVariable, onCance
 export const buildSheetSelectionUI = (variableName, sheets, onSelectSheet, onBack) => {
     const wrapper = document.createElement('div');
     wrapper.className = "text-center py-4 w-full animate-fade-in";
-    
+
     let html = `
         <div class="flex items-center justify-between mb-6">
             <button id="back-btn" class="text-gray-400 hover:text-gray-600 transition-colors">
@@ -204,7 +205,7 @@ export const buildSheetSelectionUI = (variableName, sheets, onSelectSheet, onBac
     sheets.forEach(sheet => {
         html += `
             <button data-sheet="${sheet}" class="sheet-btn p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md transition-all duration-200 transform hover:-translate-y-1 text-center flex flex-col items-center justify-center gap-3 h-28 bg-white">
-                ${spreadSheetSVG}
+                ${SVG_ICONS.SPREAD_SHEET}
                 <span class="font-medium text-sm text-gray-700 truncate w-full px-1" title="${sheet}">${sheet}</span>
             </button>
         `;
@@ -224,7 +225,7 @@ export const buildSheetSelectionUI = (variableName, sheets, onSelectSheet, onBac
 export const buildColumnSelectionUI = (variableName, sheetName, columns, usedColumns, onSelectColumn, onBack) => {
     const wrapper = document.createElement('div');
     wrapper.className = "text-center py-4 w-full animate-fade-in";
-    
+
     let html = `
         <div class="flex items-center justify-between mb-2">
             <button id="back-btn" class="text-gray-400 hover:text-gray-600 transition-colors">
@@ -275,7 +276,7 @@ export const buildRecipientsTableUI = (data, currentPage, itemsPerPage, onPageCh
         <div class="flex justify-between items-center mb-4 px-2">
             <h3 class="text-lg font-bold text-gray-900">Extracted Data <span class="text-sm font-medium text-indigo-600 ml-2 px-2.5 py-0.5 rounded-full bg-indigo-100">${data.length} total</span></h3>
             <button id="clear-table-btn" class="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
-                ${clearSVG}
+                ${SVG_ICONS.CLEAR}
                 Clear Data
             </button>
         </div>

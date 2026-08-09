@@ -1,7 +1,8 @@
-import { API_BASE_URL, AuthenticationStatus, checkBadgeSVG, checkSVG, clearSVG, clipboardSVG, eyeClosedSVG, eyeOpenedSVG, loadSVG, spreadSheetSVG, verificationSVG } from './config.mjs';
-import { cancelButton, recipientsOrderedList, setCheckCredentials, togglePassword, newVariablePopUpAlert, appendVariableElementToList, buildColumnSelectionUI, buildSheetSelectionUI, buildVariableSelectionUI, buildRecipientsTableUI } from './ui.mjs';
-import { createNewController, apiCheckCredentials, apiFileMetadata, apiLoadRecipientsByPlainText, apiLoadRecipientsByXlsx, apiSendEmails, apiTestConnection, apiLoadActiveColumns, apiExtractMappedData } from './api.mjs';
-import { initRichTextEditor } from './text-editor.mjs'
+import { API_BASE_URL, AuthenticationStatus } from './core/config.mjs';
+import { SVG_ICONS } from './ui/svg-icons.mjs';
+import { cancelButton, recipientsOrderedList, setCheckCredentials, togglePassword, newVariablePopUpAlert, appendVariableElementToList, buildColumnSelectionUI, buildSheetSelectionUI, buildVariableSelectionUI, buildRecipientsTableUI } from './ui/ui-components.mjs';
+import { createNewController, apiCheckCredentials, apiSendEmails, apiTestConnection } from './core/api-fetches.mjs';
+import { initRichTextEditor } from './ui/tiptap-text-editor.mjs'
 
 const emailSendingForm = document.getElementById('email-sending-form');
 const senderEmail = document.getElementById('sender-email');
@@ -34,12 +35,19 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+const getFileBuffer = async (file) => {
+    const arrayBuffer = await file.arrayBuffer();
+    return new Uint8Array(arrayBuffer);
+};
+
 const loadRecipientsData = async (file) => {
     savedRecipientsContainer.className = "mt-6 p-6 bg-gray-50 rounded-xl border border-gray-200 shadow-inner flex justify-center";
     savedRecipientsContainer.innerHTML = `<svg class="animate-spin h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
 
     try {
-        const data = await apiExtractMappedData(file, customVariablesMap);
+        const js_buffer = await getFileBuffer(file);
+        const mappingStr = JSON.stringify(customVariablesMap);
+        const data = window.py_extract_mapped_data(js_buffer, mappingStr);
 
         if (data && data.length > 0) {
             recipientsData = data;
@@ -106,9 +114,15 @@ recipientsDataFromExcel.addEventListener('change', async (event) => {
 
     popUpAlertContainer.classList.remove('hidden');
 
+    if (!window.pyScriptReady) {
+        alert("Please wait a few seconds for the local Excel engine to initialize.");
+        event.target.value = '';
+        return;
+    }
+
     try {
-        const metadata = await apiFileMetadata(file, fileMetadataSignal);
-        const sheets = metadata.sheets;
+        const js_buffer = await getFileBuffer(file);
+        const sheets = window.py_get_sheets(js_buffer);
 
         let currentVariable = null;
         let currentSheet = null;
@@ -119,14 +133,14 @@ recipientsDataFromExcel.addEventListener('change', async (event) => {
                     customVariablesMap,
                     (selectedVar) => { currentVariable = selectedVar; renderWizard(); },
                     () => { popUpAlertContainer.classList.add('hidden'); event.target.value = ''; },
-                    () => { 
+                    () => {
                         console.log("Final Mappings ready for Backend:", customVariablesMap);
                         popUpAlertContainer.classList.add('hidden');
                         loadRecipientsData(file);
                     }
                 );
                 popUpAlertContent.replaceChildren(ui);
-                
+
             } else if (currentSheet === null) {
                 const ui = buildSheetSelectionUI(
                     currentVariable,
@@ -135,10 +149,8 @@ recipientsDataFromExcel.addEventListener('change', async (event) => {
                     () => { currentVariable = null; renderWizard(); }
                 );
                 popUpAlertContent.replaceChildren(ui);
-                
-            } else {
-                const { controller: loadActiveColumnsController, signal: loadActiveColumnsSignal } = createNewController();
 
+            } else {
                 popUpAlertContent.innerHTML = `
                     <div id="waiting-container" class="text-center py-4">
                         <h2 class="text-xl font-bold text-gray-900">Analyzing Sheet '${currentSheet}'</h2>
@@ -158,9 +170,9 @@ recipientsDataFromExcel.addEventListener('change', async (event) => {
                     popUpAlertContent.replaceChildren();
                     event.target.value = '';
                 }));
-                
-                const colData = await apiLoadActiveColumns(file, currentSheet, loadActiveColumnsSignal);
-                
+
+                const active_columns = window.py_get_active_columns(js_buffer, currentSheet);
+
                 const usedColumns = Object.values(customVariablesMap)
                     .filter(mapping => mapping !== null && mapping.sheet === currentSheet)
                     .map(mapping => mapping.column);
@@ -168,13 +180,13 @@ recipientsDataFromExcel.addEventListener('change', async (event) => {
                 const ui = buildColumnSelectionUI(
                     currentVariable,
                     currentSheet,
-                    colData.active_columns,
+                    active_columns,
                     usedColumns,
                     (selectedCol) => {
                         customVariablesMap[currentVariable] = { sheet: currentSheet, column: selectedCol };
                         currentVariable = null;
                         currentSheet = null;
-                        renderWizard(); 
+                        renderWizard();
                     },
                     () => { currentSheet = null; renderWizard(); }
                 );

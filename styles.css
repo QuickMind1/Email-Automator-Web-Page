@@ -1,0 +1,35 @@
+.py-overlay { display: none; }
+
+input[type=file]::file-selector-button {
+    margin-right: 20px;
+    border: none;
+    background: #4f46e5;
+    padding: 8px 16px;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    transition: background .2s ease-in-out;
+}
+
+input[type=file]::file-selector-button:hover {
+    background: #4338ca;
+}
+
+.ProseMirror { min-height: 200px; outline: none; }
+.ProseMirror p { margin-bottom: 0.5em; }
+.ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: #9ca3af;
+    pointer-events: none;
+    height: 0;
+}
+
+.mention {
+    border: 1px solid #c7d2fe;
+    border-radius: 0.4rem;
+    padding: 0.1rem 0.3rem;
+    background: #e0e7ff;
+    color: #4338ca;
+    font-weight: 500;
+}
