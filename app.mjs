@@ -4,7 +4,6 @@ import { cancelButton, recipientsOrderedList, setCheckCredentials, togglePasswor
 import { createNewController, apiCheckCredentials, apiSendEmails, apiTestConnection } from './core/api-fetches.mjs';
 import { initRichTextEditor } from './ui/tiptap-text-editor.mjs'
 
-const emailSendingForm = document.getElementById('email-sending-form');
 const senderEmail = document.getElementById('sender-email');
 const senderEmailPassword = document.getElementById('sender-email-password');
 const eyeBtn = document.getElementById('toggle-password');
@@ -17,7 +16,11 @@ const variablesList = document.getElementById('variables-list');
 const newVariableBtn = document.getElementById('add-new-variable');
 const subject = document.getElementById('subject');
 const content = document.getElementById('content');
+export const validationField = document.getElementById('editor-validation-bridge');
+export const editorContainer = document.getElementById('editor-container')
 const attachment = document.getElementById('attachment');
+const emailSendingForm = document.getElementById('email-sending-form');
+export const emailSendingBtn = document.getElementById('btn-send-email');
 
 let emailEditor;
 
@@ -133,10 +136,11 @@ recipientsDataFromExcel.addEventListener('change', async (event) => {
                     customVariablesMap,
                     (selectedVar) => { currentVariable = selectedVar; renderWizard(); },
                     () => { popUpAlertContainer.classList.add('hidden'); event.target.value = ''; },
-                    () => {
+                    async () => {
                         console.log("Final Mappings ready for Backend:", customVariablesMap);
                         popUpAlertContainer.classList.add('hidden');
-                        loadRecipientsData(file);
+                        await loadRecipientsData(file);
+                        validateFormCompletion();
                     }
                 );
                 popUpAlertContent.replaceChildren(ui);
@@ -209,6 +213,18 @@ senderEmailPassword.addEventListener('keydown', async (event) => {
     }
 });
 
+const validateFormCompletion = () => {
+    emailSendingBtn.disabled = !emailSendingForm.checkValidity() || recipientsData.length === 0;
+    emailSendingBtn.className = `w-full flex justify-center items-center px-4 py-3 border border-transparent shadow-sm text-lg font-medium rounded-md text-white transition-colors ${ !emailSendingBtn.disabled ? "bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer" : "bg-indigo-300 cursor-not-allowed" }`;
+    if (emailEditor.getText().trim().length === 0) {
+        emailEditor.commands.focus();
+    }
+};
+
+emailSendingForm.addEventListener('input', (event) => {
+    validateFormCompletion();
+});
+
 emailSendingForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
@@ -221,6 +237,12 @@ emailSendingForm.addEventListener('submit', async (event) => {
         console.error("Please provide an email message content."); // TODO: implement Toast Messages for better user feedback
         return;
     }
+
+    emailSendingBtn.className = "w-full flex justify-center items-center px-4 py-3 border border-transparent shadow-sm text-lg font-medium rounded-md text-white transition-colors bg-green-600 cursor-default";
+    emailSendingBtn.innerHTML = `
+        ${SVG_ICONS.CHECK("#ffffff")}
+        Emails Being Sent!
+    `;
 
     try {
         const emailAttachment = attachment.files.length > 0 ? attachment.files[0] : null;

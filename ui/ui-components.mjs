@@ -156,7 +156,7 @@ export const buildVariableSelectionUI = (variablesMap, onSelectVariable, onCance
                 <span class="font-mono font-bold ${isMapped ? 'text-green-700' : 'text-indigo-600'}">${varName}</span>
                 <span class="text-sm font-medium flex items-center">
                     ${isMapped
-                ? `<span class="text-green-600 flex items-center">${SVG_ICONS.CHECK} ${mapping.sheet} &rarr; Col ${mapping.column}</span>`
+                ? `<span class="text-green-600 flex items-center">${SVG_ICONS.CHECK("currentColor")} ${mapping.sheet} &rarr; Col ${mapping.column}</span>`
                 : `<span class="text-gray-400 group-hover:text-indigo-500">Unmapped &rarr;</span>`
             }
                 </span>

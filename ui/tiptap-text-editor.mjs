@@ -3,6 +3,7 @@ import StarterKit from 'https://esm.sh/@tiptap/starter-kit@2.2.4';
 import Placeholder from 'https://esm.sh/@tiptap/extension-placeholder@2.2.4';
 import Mention from 'https://esm.sh/@tiptap/extension-mention@2.2.4';
 import tippy from 'https://esm.sh/tippy.js@6.3.7';
+import { editorContainer, validationField, emailSendingBtn } from '../app.mjs';
 
 export const initRichTextEditor = (containerId, getVariablesCallback) => {
     const suggestionConfig = {
@@ -81,7 +82,10 @@ export const initRichTextEditor = (containerId, getVariablesCallback) => {
                 suggestion: suggestionConfig,
             })
         ],
-        onUpdate: () => {
+        onUpdate({ editor }) {
+            validationField.textContent = editor.getText().trim().length > 0 ? editor.getText() : '';
+            validationField.dispatchEvent(new Event('input', { bubbles: true }));
+
             document.getElementById('btn-bold').classList.toggle('bg-gray-200', editor.isActive('bold'));
             document.getElementById('btn-italic').classList.toggle('bg-gray-200', editor.isActive('italic'));
             document.getElementById('btn-bullet').classList.toggle('bg-gray-200', editor.isActive('bulletList'));
