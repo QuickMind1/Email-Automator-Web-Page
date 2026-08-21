@@ -72,7 +72,7 @@ senderEmailPassword.addEventListener('input', () => {
     setCheckCredentials(checkCredentialsBtn, AuthenticationStatus.AVAILABLE);
 });
 
-checkCredentialsBtn.addEventListener('click', async (event) => await checkCredentials());
+checkCredentialsBtn.addEventListener('click', async () => await checkCredentials());
 
 const checkCredentials = async () => {
     try {
@@ -213,15 +213,13 @@ senderEmailPassword.addEventListener('keydown', async (event) => {
     }
 });
 
+
 const validateFormCompletion = () => {
     emailSendingBtn.disabled = !emailSendingForm.checkValidity() || recipientsData.length === 0;
     emailSendingBtn.className = `w-full flex justify-center items-center px-4 py-3 border border-transparent shadow-sm text-lg font-medium rounded-md text-white transition-colors ${ !emailSendingBtn.disabled ? "bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer" : "bg-indigo-300 cursor-not-allowed" }`;
-    if (emailEditor.getText().trim().length === 0) {
-        emailEditor.commands.focus();
-    }
 };
 
-emailSendingForm.addEventListener('input', (event) => {
+emailSendingForm.addEventListener('input', () => {
     validateFormCompletion();
 });
 
@@ -252,7 +250,7 @@ emailSendingForm.addEventListener('submit', async (event) => {
     }
 });
 
-newVariableBtn.addEventListener('click', (event) => {
+newVariableBtn.addEventListener('click', () => {
     const popUpComponent = newVariablePopUpAlert(() => {
         popUpAlertContainer.classList.add('hidden');
         popUpAlertContent.replaceChildren();
@@ -265,7 +263,7 @@ newVariableBtn.addEventListener('click', (event) => {
 
     let kebabCaseVariableName = '';
 
-    newVariableInput.addEventListener('input', (event) => {
+    newVariableInput.addEventListener('input', () => {
         const hasValue = newVariableInput.value.trim() !== '';
 
         kebabCaseVariableName = hasValue ? '@' + newVariableInput.value.toLowerCase().replaceAll(/[\s\_]/g, '-') : 'undefined';
