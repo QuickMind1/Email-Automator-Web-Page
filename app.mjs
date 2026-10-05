@@ -1,7 +1,7 @@
-import { API_BASE_URL, AuthenticationStatus } from './core/config.mjs';
+import { AuthenticationStatus } from './core/config.mjs';
 import { SVG_ICONS } from './ui/svg-icons.mjs';
-import { cancelButton, recipientsOrderedList, setCheckCredentials, togglePassword, newVariablePopUpAlert, appendVariableElementToList, buildColumnSelectionUI, buildSheetSelectionUI, buildVariableSelectionUI, buildRecipientsTableUI } from './ui/ui-components.mjs';
-import { createNewController, apiCheckCredentials, apiSendEmails, apiTestConnection } from './core/api-fetches.mjs';
+import { cancelButton, setCheckCredentials, togglePassword, newVariablePopUpAlert, appendVariableElementToList, buildColumnSelectionUI, buildSheetSelectionUI, buildVariableSelectionUI, buildRecipientsTableUI } from './ui/ui-components.mjs';
+import { createNewController, apiCheckCredentials, apiSendEmails } from './core/api-fetches.mjs';
 import { initRichTextEditor } from './ui/tiptap-text-editor.mjs'
 
 const senderEmail = document.getElementById('sender-email');
