@@ -109,6 +109,26 @@ export const initRichTextEditor = (containerId, getVariablesCallback) => {
                     }
                 }
                 return false;
+            },
+            handlePaste: function(view, event, slice) {
+                if (event.clipboardData && event.clipboardData.files && event.clipboardData.files.length > 0) {
+                    const file = event.clipboardData.files[0];
+
+                    if (file.type.startsWith('image/')) {
+                        event.preventDefault();
+                        
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const base64String = e.target.result;
+                            editor.chain().focus().setImage({ src: base64String }).run();
+                        };
+                        
+                        reader.readAsDataURL(file);
+                        
+                        return true;
+                    }
+                }
+                return false;
             }
         },
         onUpdate({ editor }) {
